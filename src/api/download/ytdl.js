@@ -1,4 +1,4 @@
-const axios = require('axios')
+const axios = require('axios');
 
 async function Ytdll(url, type) {
     const headers = {
@@ -12,45 +12,40 @@ async function Ytdll(url, type) {
         "sec-fetch-site": "cross-site",
         "Referer": "https://id.ytmp3.mobi/",
         "Referrer-Policy": "strict-origin-when-cross-origin"
-    }
+    };
 
-    const randomKarakter = async (length) => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-        let result = ''
-        for (let i = 0; i < length; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length))
-        }
-        return result
-    }
+    const initial = await axios.get(`https://d.ymcdn.org/api/v1/init?p=y&23=1llum1n471&_=${Math.random()}`, { headers });
+    const init = initial.data;
 
-    const initial = await axios.get(`https://d.ymcdn.org/api/v1/init?p=y&23=1llum1n471&_=${Math.random()}`, { headers })
-    const init = initial.data
+    const id = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?/]+)/)?.[1];
+    if (!id) throw new Error('Invalid YouTube URL');
 
-    const id = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?/]+)/)?.[1]
+    let mp4_ = init.convertURL + `&v=${id}&f=mp4&_=${Math.random()}`;
+    let mp3_ = init.convertURL + `&v=${id}&f=mp3&_=${Math.random()}`;
 
-    let mp4_ = init.convertURL+`&v=${id}&f=mp4&_=${Math.random()}`
-    let mp3_ = init.convertURL+`&v=${id}&f=mp3&_=${Math.random()}`
+    const mp4__ = await axios.get(mp4_, { headers });
+    const mp3__ = await axios.get(mp3_, { headers });
 
-    const mp4__ = await axios.get(mp4_, { headers })
-    const mp3__ = await axios.get(mp3_, { headers })
-
-    let info = {}
+    let info = {};
     while (true) {
-        let j = await axios.get(mp3__.data.progressURL, { headers })
-        info = j.data
-        if (info.progress == 3) break
+        let j = await axios.get(mp3__.data.progressURL, { headers });
+        info = j.data;
+        if (info.progress === 3) break;
     }
+
+    const cover = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
 
     return {
         title: info.title,
-        mp3: mp3__.data.downloadURL, 
-        mp4: mp4__.data.downloadURL
-    }
+        mp3: mp3__.data.downloadURL,
+        mp4: mp4__.data.downloadURL,
+        cover
+    };
 }
 
 module.exports = function (app) {
-app.get('/download/ytdl', async (req, res) => {
-       const { url } = req.query
+    app.get('/download/ytdl', async (req, res) => {
+        const { url } = req.query;
         try {
             const results = await Ytdll(url);
             res.status(200).json({
@@ -60,5 +55,5 @@ app.get('/download/ytdl', async (req, res) => {
         } catch (error) {
             res.status(500).send(`Error: ${error.message}`);
         }
-});
-}
+    });
+};
